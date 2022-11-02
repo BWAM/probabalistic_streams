@@ -1,0 +1,99 @@
+---
+title: "Basin_map"
+author: "Keleigh Reynolds"
+date: "11/2/2022"
+output: html_document
+---
+install packages
+```{r}
+# library(remotes)
+# install_github("r-tmap/tmaptools")
+# install_github("r-tmap/tmap")
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+# for loading our data
+library(raster)
+library(readr)
+library(readxl)
+library(sf)
+# for datasets
+library(maps)
+library(spData)
+# for plotting
+library(grid)
+library(tmap)
+library(viridis)
+```
+
+Read in the .shp file for the basins.
+
+```{r}
+basin_path<-here::here("map_files")
+
+basin<-rgdal::readOGR(
+dsn = basin_path,
+layer="basin",
+verbose=FALSE
+)
+
+#change coords to web mercator for the map
+basin_shp<-sp::spTransform(basin, sp::CRS("+proj=longlat +datum=WGS84 +no_defs"))
+
+```
+Get the state outline
+```{r}
+
+library(maps)
+states<-sf::st_as_sf(map("state",plot=FALSE,fill=TRUE))
+nys<-states %>% 
+  filter(ID=="new york")
+
+#get bounding for the outline this is for the inset map
+outline.df<-ggplot2::fortify(nys)
+nybox<-sf::st_as_sfc(sf::st_bbox(outline.df))
+
+# make some bbox magic to give it a little border
+bbox_new <- st_bbox(nybox) # current bounding box
+
+xrange <- bbox_new$xmax - bbox_new$xmin # range of x values
+yrange <- bbox_new$ymax - bbox_new$ymin # range of y values
+
+# bbox_new[1] <- bbox_new[1] - (0.25 * xrange) # xmin - left
+ bbox_new[3] <- bbox_new[3] + (0.25 * xrange) # xmax - right
+# bbox_new[2] <- bbox_new[2] - (0.25 * yrange) # ymin - bottom
+bbox_new[4] <- bbox_new[4] + (0.2 * yrange) # ymax - top
+
+bbox_new <- bbox_new %>%  # take the bounding box ...
+  st_as_sfc() # ... and make it a sf polygon
+
+
+
+```
+
+Print the map
+
+```{r}
+basin_map<-tm_basemap(c(StreetMap = "OpenStreetMap",
+                        TopoMap = "OpenTopoMap"))+
+  tmap::tm_shape(nys,bbox = bbox_new)+tmap::tm_fill()+
+  tm_shape(basin_shp)+ tm_fill(col="M_BASIN_ID",alpha = .9,title="Basin ID")+
+  tm_borders()+
+  tm_scale_bar(position = c("left", "bottom"), width = 0.15) +
+  tm_compass(position = c("left", "top"), size = 2)+
+  tm_layout(title="Statewide Probabalistic Analysis")
+basin_map+ tm_credits("Data source:2016-2021 ", fontface = "italic", align = "right") +
+  tm_credits("Author: SMAS ", fontface = "bold", align = "right")
+
+```
+ Append data to plot
+```{r}
+basin_map_append <- append_data(basin_map, sps_data,
+ key.shp=“code”, key.data=“muni_code”)
+```
+
+
+
