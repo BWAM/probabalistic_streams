@@ -71,6 +71,7 @@ bbox_new[4] <- bbox_new[4] + (0.2 * yrange) # ymax - top
 
 bbox_new <- bbox_new %>%  # take the bounding box ...
   st_as_sfc() # ... and make it a sf polygon
+#checking SSL
 
 
 
