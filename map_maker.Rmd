@@ -54,7 +54,7 @@ states<-sf::st_as_sf(map("state",plot=FALSE,fill=TRUE))
 nys<-states %>% 
   filter(ID=="new york")
 
-#get bounding for the outline this is for the inset map
+#get bounding for the outline this is for the inset map, to make it have a border
 outline.df<-ggplot2::fortify(nys)
 nybox<-sf::st_as_sfc(sf::st_bbox(outline.df))
 
