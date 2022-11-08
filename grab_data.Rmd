@@ -175,6 +175,8 @@ field_raw_list$insitu$pcode.num<-as.numeric(field_raw_list$insitu$ISWC_CHEM_PARA
 field_raw_list$insitu<-merge(field_raw_list$insitu,chem_raw_list$pcode,by="pcode.num",all.x = TRUE)
 
 ```
+
+
 ```{r get-macro-data}
 #read in data that have the "master" tag
 db_path<-paste("C:/Users/",params$user,"/New York State Office of Information Technology Services/SMAS - Streams Data Modernization",sep = "")
@@ -283,25 +285,39 @@ sample_info.df<-field_raw_list$sample_info %>%
 
 ```
 
+Subset to Dates function
+
+```{r}
+
+```
 
 RUN THE SPSURVEY!!
 So it looks like these files need to have a projection assigned and be an sf object?
 
+We also need to assign the weight back to the COMID or the EPA ID to get that for the analysis to run.
+
 ```{r run-spsurvey package}
 #open the template data
 #load(file='data/NE_Lakes.rda')
+
+metrics.final$weight<-5
 
 metrics.sf<-st_as_sf(metrics.final,
                      coords = c("longitude","latitude"),
                      crs="+proj=longlat +datum=WGS84 +no_defs")
 
 
+
 cont_ests<-spsurvey::cont_analysis(metrics.sf,
                                    siteID="MSSIH_EVENT_SMAS_HISTORY_ID",
                                    vars="MMDH_BIO_ASMT_PROFILE_SCORE",
-                                   weight="SITE_BASIN")
+                                   subpops = "SITE_BASIN",
+                                   weight="weight")
 
 spsurvey::cdf_plot(cont_ests$CDF)
+
+#save the results to outputs
+write.csv(cont_ests$Mean,"outputs/mean_subpop_basin.csv")
 ```
 
 
