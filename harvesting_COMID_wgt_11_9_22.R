@@ -21,19 +21,30 @@ prob_3<-readxl::read_excel(path=here::here("data/NY_Basin_2008_gis_export.xlsx")
 
 #select columns from the dataframes
 prob_1_short<-prob_1 %>% 
-  select(COMID,wgt)
+  select(COMID,wgt) %>% 
+  mutate(draw_year="2018_2022")
 
 prob_2_short<-prob_2 %>% 
-  select(COMID,wgt)
+  select(COMID,wgt)%>% 
+  mutate(draw_year="2013_2018")
 
 prob_3_short<-prob_3 %>% 
-  select(COMID,wgt)
+  select(COMID,wgt)%>% 
+  mutate(draw_year="2008_2013")
 
 
 #bind them together
 prob_all<-rbind(prob_1_short,prob_2_short,prob_3_short)
 
-#check to see they all bound-looks good
+prob_all<-prob_all %>% 
+  distinct() #take out any that are duplicated-although there are, we may not want
+#to do the draw year?
+#look at the duplicates
+ 
+dups <-prob_all[duplicated(prob_all$COMID)|duplicated(prob_all$COMID, fromLast=TRUE),]
+dups
+#so i thinnk we'll have to bind by draw year AND COMID, since they seem duplicated. 
+
 
 write.csv(prob_all,"outputs/comid_wgt_all_years.csv")
 
