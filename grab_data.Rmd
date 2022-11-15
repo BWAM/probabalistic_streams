@@ -245,8 +245,6 @@ macro_raw_list$bug_method$MSSIH_EVENT_SMAS_SAMPLE_DATE<-as.Date(macro_raw_list$b
 field_raw_list$habitat$HFDH_EVENT_SMAS_SAMPLE_DATE<-as.Date(field_raw_list$habitat$HFDH_EVENT_SMAS_SAMPLE_DATE,"%m/%d/%Y")
 ```
 
-NEED TO WRITE THE SUBSET TO DATES FUNCTION
-
 
 ```{r subset-data-to-sites-list}
 sites.l<-unique(sites_list$site_id)
@@ -288,7 +286,7 @@ sample_info.df<-field_raw_list$sample_info %>%
 
 ```
 
-Subset to Dates function
+Subset to Dates function-we have the list of sites/dates. One question-do we do an average of BAP at a site (if it's been visited a couple times?) or do we do JUST the BAP found at the sampling date?
 
 ```{r}
 
