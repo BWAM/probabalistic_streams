@@ -11,7 +11,7 @@ params:
 install packages
 
 ```{r}
-checkpoint::checkpoint("2022-11-17")
+# checkpoint::checkpoint("2022-11-17")
 # # install the most recent approved version from CRAN
 # install.packages("spsurvey")
 # # load the most recent approved version from CRAN

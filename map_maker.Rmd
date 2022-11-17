@@ -8,7 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-checkpoint::checkpoint(snapshot_date = "2022-11-17")
+# checkpoint::checkpoint(snapshot_date = "2022-11-17")
 library(dplyr)
 # for loading our data
 library(raster)
@@ -43,8 +43,6 @@ basin_shp <- sp::spTransform(basin, sp::CRS("+proj=longlat +datum=WGS84 +no_defs
 Get the state outline
 
 ```{r}
-
-library(maps)
 states <- sf::st_as_sf(map("state", plot = FALSE, fill = TRUE))
 nys <- states %>%
   filter(ID == "new york")
