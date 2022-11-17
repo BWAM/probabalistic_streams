@@ -33,13 +33,13 @@ sub_df <- filter(
   YEAR >= start & YEAR <= end #this filtered teh data set to be within the draw years
 )
 
-anti_df <- anti_join(
-  x = sub_df,
-  y = clean_v2,
-  by = c("COMID",
-         "YEAR",
-         "SMAS_ID") #this was to see what didn't join, this is empty
-)
+# anti_df <- anti_join(
+#   x = sub_df,
+#   y = clean_v2,
+#   by = c("COMID",
+#          "YEAR",
+#          "SMAS_ID") #this was to see what didn't join, this is empty
+# )
 
 test <- clean_v2[!(clean_v2$COMID %in% sub_df$COMID), ] #this is looking for COMIDs that
 #existed in the original file, but now don't exist in teh joined file that is between the draws
@@ -155,3 +155,4 @@ sub_df_3<-sub_df_2 %>%
 #to remove. so all of these matched by COMID, year and date start. 
 # I beleive it IS possible we have duplicate COMIDs, but they will have different matching years
 #so that's ok.
+
