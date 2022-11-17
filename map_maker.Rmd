@@ -8,7 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-checkpoint::checkpoint(snapshot_date = "2022-11-17")
+#checkpoint::checkpoint(snapshot_date = "2022-11-17")
 library(dplyr)
 # for loading our data
 library(raster)
@@ -28,7 +28,7 @@ library(viridis)
 Read in the .shp file for the basins.
 
 ```{r}
-basin_path <- here::here("map_files")
+basin_path <- "L:/BWAM Share/SMAS/data/map_files"
 
 basin <- rgdal::readOGR(
   dsn = basin_path,
@@ -153,6 +153,7 @@ basin_map2 <- tm_basemap(c(
 basin_map2 + tm_credits("Data source:2008-2012 ", fontface = "italic", align = "right") +
   tm_credits("Author: SMAS ", fontface = "bold", align = "right")
 ```
+
 ```{r create-tables-for-writeup}
 
 sps_data_short <- sps_data %>%
@@ -180,7 +181,7 @@ table.f <- function(df, x, y) {
   tl
 }
 
-table.f(sps_data_short, 2, ncol(sps_data_short))
+tab<-table.f(sps_data_short, 2, ncol(sps_data_short))
 ```
 
 
