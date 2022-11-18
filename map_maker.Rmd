@@ -31,6 +31,7 @@ Read in the .shp file for the basins.
 
 ```{r}
 basin_path <- "L:/DOW/BWAM Share/SMAS/data/map_files"
+basin_path <- "L:/BWAM Share/SMAS/data/map_files" #for keleigh
 
 basin <- rgdal::readOGR(
   dsn = basin_path,
@@ -77,33 +78,33 @@ bbox_new <- bbox_new %>% # take the bounding box ...
 Print the map
 
 ```{r}
-basin_map <- tm_basemap(c(
-  StreetMap = "OpenStreetMap",
-  TopoMap = "OpenTopoMap"
-)) +
-  # tmap_options(check.and.fix = TRUE) +
-  # tmap::tm_shape(nys, bbox = bbox_new) +
-  # tmap::tm_fill() +
-  tm_shape(basin_shp,
-    bbox = bbox_new
-  ) +
-  tm_fill(col = "Basin__", alpha = .9, title = "Basin ID") +
-  tm_borders() +
-  tm_scale_bar(position = c("left", "bottom"), width = 0.15) +
-  tm_compass(position = c("left", "top"), size = 2) +
-  tm_layout(
-    title = "Statewide Probabalistic Analysis",
-    legend.position = c("right", "top")
-  ) +
-  tm_credits("Data source:2016-2021 ",
-    fontface = "italic",
-    align = "right"
-  ) +
-  tm_credits("Author: SMAS ",
-    fontface = "bold",
-    align = "right"
-  )
-basin_map
+# basin_map <- tm_basemap(c(
+#   StreetMap = "OpenStreetMap",
+#   TopoMap = "OpenTopoMap"
+# )) +
+#   # tmap_options(check.and.fix = TRUE) +
+#   # tmap::tm_shape(nys, bbox = bbox_new) +
+#   # tmap::tm_fill() +
+#   tm_shape(basin_shp,
+#     bbox = bbox_new
+#   ) +
+#   tm_fill(col = "Basin__", alpha = .9, title = "Basin ID") +
+#   tm_borders() +
+#   tm_scale_bar(position = c("left", "bottom"), width = 0.15) +
+#   tm_compass(position = c("left", "top"), size = 2) +
+#   tm_layout(
+#     title = "Statewide Probabalistic Analysis",
+#     legend.position = c("right", "top")
+#   ) +
+#   tm_credits("Data source:2016-2021 ",
+#     fontface = "italic",
+#     align = "right"
+#   ) +
+#   tm_credits("Author: SMAS ",
+#     fontface = "bold",
+#     align = "right"
+#   )
+# basin_map
 ```
  Append data to plot-have to run the grab_data .RMD first, it will save the output in the outputs folder.
  
@@ -139,7 +140,8 @@ basin_map2 <- tm_basemap(c(
   tm_borders() +
   tm_scale_bar(position = c("left", "bottom"), width = 0.15) +
   tm_compass(position = c("left", "top"), size = 2) +
-  tm_layout(title = "Statewide Probabalistic Analysis") +
+  tm_layout(title = "Statewide Probabalistic Analysis",
+            legend.position = c("right", "top")) +
   tm_credits("Data source:2017-2021 ",
     fontface = "italic",
     align = "right"
@@ -158,7 +160,7 @@ basin_map2
 sps_data2 <- read.csv("outputs/mean_subpop_basin_2008_2012_cycle.csv")
 sps_data2$Basin__ <- sps_data2$Subpopulation
 
-basin_map_append <- merge(basin_shp, sps_data2) # merge data by changing the subpopulation name
+basin_map_append2 <- merge(basin_shp, sps_data2) # merge data by changing the subpopulation name
 ```
 
 
@@ -166,12 +168,17 @@ basin_map_append <- merge(basin_shp, sps_data2) # merge data by changing the sub
 
 # viridis magma, specify 0-10 range in the tm_fill; just do the last cycle for the analysis-look this up to see how we do trend analysis-just do last 5
 
-basin_map2 <- tm_basemap(c(
+basin_map_first <- tm_basemap(c(
   StreetMap = "OpenStreetMap",
   TopoMap = "OpenTopoMap"
 )) +
-  tmap::tm_shape(nys, bbox = bbox_new) + tmap::tm_fill() +
-  tm_shape(basin_map_append) + tm_fill(
+  # tmap::tm_shape(nys,
+  #                bbox = bbox_new) +
+  # tmap::tm_fill() +
+  tm_shape(basin_map_append2,
+    bbox = bbox_new
+  ) +
+  tm_fill(
     col = "Estimate", alpha = .9,
     breaks = c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
     title = "Estimated BAP", palette = "-viridis"
@@ -179,10 +186,18 @@ basin_map2 <- tm_basemap(c(
   tm_borders() +
   tm_scale_bar(position = c("left", "bottom"), width = 0.15) +
   tm_compass(position = c("left", "top"), size = 2) +
-  tm_layout(title = "Statewide Probabalistic Analysis")
+  tm_layout(title = "Statewide Probabalistic Analysis",
+            legend.position = c("right", "top")) +
+  tm_credits("Data source:2008-2012 ",
+    fontface = "italic",
+    align = "right"
+  ) +
+  tm_credits("Author: SMAS ",
+    fontface = "bold",
+    align = "right"
+  )
 
-basin_map2 + tm_credits("Data source:2008-2012 ", fontface = "italic", align = "right") +
-  tm_credits("Author: SMAS ", fontface = "bold", align = "right")
+basin_map_first
 ```
 
 ```{r create-tables-for-writeup}
@@ -197,7 +212,7 @@ sps_data_short <- sps_data %>%
   ) %>%
   mutate_if(is.numeric,
     round,
-    digits = 1
+    digits = 2
   ) # round the digits in the table to something more palatable
 # table function
 table.f <- function(df, x, y) {
@@ -213,6 +228,8 @@ table.f <- function(df, x, y) {
 }
 
 tab <- table.f(sps_data_short, 2, ncol(sps_data_short))
+tab
+
 ```
 
 
