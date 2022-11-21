@@ -1,0 +1,23 @@
+---
+title: "305(b) Report"
+author: "Zachary M. Smith"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r load-packages, include=FALSE}
+library(spsurvey)
+```
+
+```{r source-scripts, include=FALSE}
+knitr::purl(here::here("grab_data.Rmd"))
+knitr::purl(here::here("map_maker.Rmd"))
+
+source("grab_data.R", local = TRUE)
+source("map_maker.R", local = TRUE)
+```
+
