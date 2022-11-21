@@ -5,13 +5,13 @@ date: "11/2/2022"
 output: html_document
 params: 
   user: kareynol
-  file: outputs/prob_site_wgt_kar.csv
+  file: outputs/prob_site_adj_wgt_kar.csv
 ---
 
 install packages
 
 ```{r}
-checkpoint::checkpoint("2022-11-17")
+#checkpoint::checkpoint("2022-11-17")
 # # install the most recent approved version from CRAN
 # install.packages("spsurvey")
 # # load the most recent approved version from CRAN
@@ -20,7 +20,9 @@ library(spsurvey)
 # view the citation
 # citation(package = "spsurvey")
 library(dplyr)
-
+# source(here::here("harvestng_COMID_wgt_11_9_22.R"))
+# source(here::here("Scripts/comid_wgt_join.R")) ##run these to match the COMID and wgts from the original EPA draw files. 
+#As of 11/21/22 KAR identified that wgts have to be re-adjustd after determining what was actually sampled. This was updated and included in the analysis now.
 
 
 # test the branch and commit
