@@ -204,7 +204,7 @@ basin_map_first
 
 sps_data_short <- sps_data %>%
   dplyr::select(Subpopulation, nResp, Estimate, StdError) %>%
-  rename(
+  dplyr::rename(
     Basin = Subpopulation,
     n = nResp,
     "Estimated BAP Score" = Estimate,
