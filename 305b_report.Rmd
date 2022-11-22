@@ -2,22 +2,56 @@
 title: "305(b) Report"
 author: "Zachary M. Smith"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
-output: word_document
+output:
+  html_document:
+    df_print: paged
 ---
+# Streams Probabilistic Sampling : 2017-2021
+
+Probability based sampling was conducted by the Stream Monitoring and Assessment Section from 2008-2022. For this report, data from the 2013 and the 2018 EPA draws were utilized for a full RIBS cycle (all 17 basins over 5 years).  Probabilty based sampling allows for statewide and basin-wide objective analysis for the purpose of management and characterization. For this analysis, Bioassessment Profile Scores (BAP) collected from the Probabilistic sampling design were used for basic condition estimates across the state.
+
+For the stream survey design the Generalized Random Tessellation Stratified (GRTS) survey design for a linear resource was used.  The GRTS design includes reverse hierarchical ordering of the selected sites, stratified by Basin. Sites were selected within each basin with unequal probability by stream order category (1st, 2nd, 3rd, and 4th+ strahler orders).
+
+Benthic macroinvertebrates were collected once at each site, and an associated BAP score was calculated according to the [biomonitoring SOP]. (https://www.dec.ny.gov/docs/water_pdf/sop20821biomonitoring.pdf)  
+For more information about the collection and calculation of BAP scores please see the [Bioassessment Fact Sheet.] (https://www.dec.ny.gov/docs/water_pdf/bapnarrative18.pdf)
+
+The **spsurvey** package (Dumelle et. al, 2022) was utilized for analysis of BAP scores and adjusting weight calculations for each site. Weight calculations were computed using the unequal probability grouping (Strahler order), and readjusted after sampling was complete. These weights are then used to properly estimate the distribution across the state or by subpopulation (Basin). Continuous variable analysis using the "cont_analysis" function of the **spsurvey** package was utilized for subpopulatiion analysis at the Basin scale, returned as cumulative ditribution functions (CDF's). The function returns estimated means, standard error and confidence intervals. The table below presents the estimated BAP means by Basin and standard error. 
+
+
+
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+#citation("spsurvey")
 ```
 
 ```{r load-packages, include=FALSE}
 library(spsurvey)
 ```
 
-```{r source-scripts, include=FALSE}
+```{r source-scripts, include=FALSE,results='markup'}
 knitr::purl(here::here("grab_data.Rmd"))
 knitr::purl(here::here("map_maker.Rmd"))
 
-source("grab_data.R", local = TRUE)
-source("map_maker.R", local = TRUE)
+#source("grab_data.R", local = TRUE)
+#source("map_maker.R", local = TRUE)
 ```
 
+```{r print-table,include=FALSE,results='markup'}
+#flextable::flextable_to_rmd(tab)
+```
+
+
+Basin analyis indicated that in New York State, basin 15, 17, and 7 were the most impacted according to BAP scores (BAP = 2.85 <u> +</u>0.79,4.02 <u> +</u>0.52,4.05 <u> +</u>0.79, respectively). The map below presents the Basin analysis regionally by BAP category.
+
+```{r map}
+#basin_map2
+```
+
+ 
+ The analysis above was conducted using R 2.7.0 with the packages spsurvey 5.0.0 and tidyverse 1.3.0. 
+ R itself and all packages used are available from [CRAN.] (http://CRAN.R-project.org/) 
+ 
+ **References**  
+Dumelle, Michael., Kincaid, T. M., Olsen, A. R., and Weber, M. H. (2022). spsurvey: Spatial Sampling Design and Analysis. R package version 5.3.0.
