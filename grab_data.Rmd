@@ -370,7 +370,7 @@ cont_ests <- spsurvey::cont_analysis(metrics.sf,
   siteID = "MSSIH_EVENT_SMAS_HISTORY_ID",
   vars = "MMDH_BIO_ASMT_PROFILE_SCORE",
   subpops = "BASIN",
-  weight = "wgt"
+  weight = "adj_wgt" #using the adjusted weights calculatd on 11/22/22 KAR
 )
 # statewide
 # cont_ests<-spsurvey::cont_analysis(metrics.sf,
@@ -389,32 +389,33 @@ spsurvey::sp_plot(metrics.sf, formula = MMDH_BIO_ASMT_PROFILE_SCORE ~ BASIN)
 ```
 
 ```{r trend-data}
+#as of 11/22/22 this is not working, but will be fun to try
 
-metrics_all.sf <- sf::st_as_sf(metrics_joined,
-  coords = c("longitude", "latitude"),
-  crs = "+proj=longlat +datum=WGS84 +no_defs"
-)
-metrics_all.sf$YEAR <- as.factor(metrics_all.sf$YEAR)
-
-change <- spsurvey::change_analysis(
-  metrics_all.sf,
-  siteID = "MSSIH_EVENT_SMAS_HISTORY_ID",
-  vars_cont = "MMDH_BIO_ASMT_PROFILE_SCORE",
-  surveyID = "YEAR",
-  weight = "wgt"
-)
-
-
-ex_run <- spsurvey::change_analysis(
-  ex,
-  siteID = "SITE_ID",
-  vars_cont = "BMMI",
-  vars_cat = "NITR_COND",
-  surveyID = "YEAR",
-  weight = "WEIGHT"
-)
-
-ex <- spsurvey::NRSA_EPA7
+# metrics_all.sf <- sf::st_as_sf(metrics_joined,
+#   coords = c("longitude", "latitude"),
+#   crs = "+proj=longlat +datum=WGS84 +no_defs"
+# )
+# metrics_all.sf$YEAR <- as.factor(metrics_all.sf$YEAR)
+# 
+# change <- spsurvey::change_analysis(
+#   metrics_all.sf,
+#   siteID = "MSSIH_EVENT_SMAS_HISTORY_ID",
+#   vars_cont = "MMDH_BIO_ASMT_PROFILE_SCORE",
+#   surveyID = "YEAR",
+#   weight = "wgt"
+# )
+# 
+# 
+# ex_run <- spsurvey::change_analysis(
+#   ex,
+#   siteID = "SITE_ID",
+#   vars_cont = "BMMI",
+#   vars_cat = "NITR_COND",
+#   surveyID = "YEAR",
+#   weight = "WEIGHT"
+# )
+# 
+# ex <- spsurvey::NRSA_EPA7
 ```
 
 

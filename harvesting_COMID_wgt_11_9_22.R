@@ -41,14 +41,14 @@ prob_3<-used_site(prob_3)
 adjust_weight<-function(df){
   
   wgt<-df$wgt
-  wgtcat<-df$status
+  wgtcat<-df$mdcaty
   sites<-df$use
   
   framesize_x<-df %>% 
-    group_by(status) %>% 
-    dplyr::summarise(n=n())
+    group_by(mdcaty) %>% 
+    dplyr::summarise(n=sum(wgt))
   
-  x1<-framesize_x$status
+  x1<-framesize_x$mdcaty
   x2<-framesize_x$n
   framesize<-setNames(x2,x1)
   
@@ -65,17 +65,17 @@ prob_3_adjusted<-adjust_weight(prob_3)
 
 #select columns from the dataframes
 prob_1_short<-prob_1_adjusted %>% 
-  select(COMID,wgt,x) %>% 
+  dplyr::select(COMID,wgt,x) %>% 
   dplyr::rename(adj_wgt=x) %>% 
   mutate(draw_year="2018_2022")
 
 prob_2_short<-prob_2_adjusted %>% 
-  select(COMID,wgt,x) %>% 
+  dplyr::select(COMID,wgt,x) %>% 
   dplyr::rename(adj_wgt=x) %>% 
   mutate(draw_year="2013_2018")
 
 prob_3_short<-prob_3_adjusted %>% 
-  select(COMID,wgt,x) %>% 
+  dplyr::select(COMID,wgt,x) %>% 
   dplyr::rename(adj_wgt=x) %>%  
   mutate(draw_year="2008_2013")
 
