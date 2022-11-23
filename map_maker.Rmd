@@ -113,8 +113,11 @@ Print the map
 # read in the analysis data
 sps_data <- read.csv("outputs/mean_subpop_basin_17_21_cycle.csv")
 sps_data$Basin__ <- sps_data$Subpopulation
+sps_data2<-sps_data %>% #take out housatonic and ramapo
+  dplyr::filter(Basin__!=15)
+  
 
-basin_map_append <- merge(basin_shp, sps_data) # merge data by changing the subpopulation name
+basin_map_append <- merge(basin_shp, sps_data2) # merge data by changing the subpopulation name
 ```
 
 
@@ -149,18 +152,17 @@ basin_map2 <- tm_basemap(c(
   tm_credits("Author: SMAS ",
     fontface = "bold",
     align = "right"
-  )
-
+  )+tm_text("Basin__", size=0.5)
 basin_map2
 ```
 
 ```{r}
 
 # read in the analysis data for first cycle
-sps_data2 <- read.csv("outputs/mean_subpop_basin_2008_2012_cycle.csv")
-sps_data2$Basin__ <- sps_data2$Subpopulation
-
-basin_map_append2 <- merge(basin_shp, sps_data2) # merge data by changing the subpopulation name
+# sps_data2 <- read.csv("outputs/mean_subpop_basin_2008_2012_cycle.csv")
+# sps_data2$Basin__ <- sps_data2$Subpopulation
+# 
+# basin_map_append2 <- merge(basin_shp, sps_data2) # merge data by changing the subpopulation name
 ```
 
 
@@ -168,42 +170,42 @@ basin_map_append2 <- merge(basin_shp, sps_data2) # merge data by changing the su
 
 # viridis magma, specify 0-10 range in the tm_fill; just do the last cycle for the analysis-look this up to see how we do trend analysis-just do last 5
 
-basin_map_first <- tm_basemap(c(
-  StreetMap = "OpenStreetMap",
-  TopoMap = "OpenTopoMap"
-)) +
-  # tmap::tm_shape(nys,
-  #                bbox = bbox_new) +
-  # tmap::tm_fill() +
-  tm_shape(basin_map_append2,
-    bbox = bbox_new
-  ) +
-  tm_fill(
-    col = "Estimate", alpha = .9,
-    breaks = c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
-    title = "Estimated BAP", palette = "-viridis"
-  ) +
-  tm_borders() +
-  tm_scale_bar(position = c("left", "bottom"), width = 0.15) +
-  tm_compass(position = c("left", "top"), size = 2) +
-  tm_layout(title = "Statewide Probabalistic Analysis",
-            legend.position = c("right", "top")) +
-  tm_credits("Data source:2008-2012 ",
-    fontface = "italic",
-    align = "right"
-  ) +
-  tm_credits("Author: SMAS ",
-    fontface = "bold",
-    align = "right"
-  )
-
-basin_map_first
+# basin_map_first <- tm_basemap(c(
+#   StreetMap = "OpenStreetMap",
+#   TopoMap = "OpenTopoMap"
+# )) +
+#   # tmap::tm_shape(nys,
+#   #                bbox = bbox_new) +
+#   # tmap::tm_fill() +
+#   tm_shape(basin_map_append2,
+#     bbox = bbox_new
+#   ) +
+#   tm_fill(
+#     col = "Estimate", alpha = .9,
+#     breaks = c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+#     title = "Estimated BAP", palette = "-viridis"
+#   ) +
+#   tm_borders() +
+#   tm_scale_bar(position = c("left", "bottom"), width = 0.15) +
+#   tm_compass(position = c("left", "top"), size = 2) +
+#   tm_layout(title = "Statewide Probabalistic Analysis",
+#             legend.position = c("right", "top")) +
+#   tm_credits("Data source:2008-2012 ",
+#     fontface = "italic",
+#     align = "right"
+#   ) +
+#   tm_credits("Author: SMAS ",
+#     fontface = "bold",
+#     align = "right"
+#   )
+# 
+# basin_map_first
 ```
 
 ```{r create-tables-for-writeup}
 
 sps_data_short <- sps_data %>%
-  dplyr::select(Subpopulation, nResp, Estimate, StdError) %>%
+  dplyr::select(Subpopulation, Estimate, StdError,nResp) %>%
   dplyr::rename(
     Basin = Subpopulation,
     n = nResp,
@@ -226,6 +228,22 @@ table.f <- function(df, x, y) {
   tl <- align(tl, i = NULL, j = (x:y), align = "center", part = "all")
   tl
 }
+
+#merge with basin name
+basins<-basin_shp@data
+basins<-basins %>% 
+  dplyr::select(Basin,Basin__) %>% 
+  dplyr::rename(Name=Basin) %>% 
+  mutate(Name=case_when(Name=="Lake Ontario1"~"Lake Ontario and Tribs",
+                        Name=="Lake Ontario3"~"Lake Ontario and Tribs",
+                        Name=="Lake Ontario4"~"Lake Ontario and Tribs",
+                        Name=="Lake Ontario Tributaries"~"Lake Ontario and Tribs",
+                        TRUE~Name)) %>% 
+  distinct()
+sps_data_short<-merge(sps_data_short,basins,
+                      by.x="Basin",
+                      by.y="Basin__")
+
 
 tab <- table.f(sps_data_short, 2, ncol(sps_data_short))
 tab
