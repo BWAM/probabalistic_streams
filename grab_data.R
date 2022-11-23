@@ -1,7 +1,7 @@
 params <-
 list(user = "kareynol", file = "outputs/prob_site_adj_wgt_kar.csv")
 
-## --------------------------------------------------------------------------------------------
+## -----------------------------------------------------------------------------------------------------
 #checkpoint::checkpoint("2022-11-17")
 # # install the most recent approved version from CRAN
 # install.packages("spsurvey")
@@ -11,7 +11,7 @@ library(spsurvey)
 # view the citation
 # citation(package = "spsurvey")
 library(dplyr)
-# source(here::here("harvestng_COMID_wgt_11_9_22.R"))
+# source(here::here("harvesting_COMID_wgt_11_9_22.R"))
 # source(here::here("Scripts/comid_wgt_join.R")) ##run these to match the COMID and wgts from the original EPA draw files. 
 #As of 11/21/22 KAR identified that wgts have to be re-adjustd after determining what was actually sampled. This was updated and included in the analysis now.
 
@@ -19,11 +19,11 @@ library(dplyr)
 # test the branch and commit
 
 
-## ----read-site-list--------------------------------------------------------------------------
+## ----read-site-list-----------------------------------------------------------------------------------
 sites_list <- read.csv(here::here(params$file), stringsAsFactors = FALSE)
 
 
-## ----get-site-info---------------------------------------------------------------------------
+## ----get-site-info------------------------------------------------------------------------------------
 # read in sites and initialize sites list to include all sites
 # read in data that have the "master" tag
 db_path <- paste("C:/Users/", params$user, "/New York State Office of Information Technology Services/SMAS - Streams Data Modernization", sep = "")
@@ -67,7 +67,7 @@ site.ex.l <- unique(sites_list$SMAS_ID)
 # so we don't actually need this, we have basin andlat/long in the final file
 
 
-## ----get-chemistry-and-pcode-data------------------------------------------------------------
+## ----get-chemistry-and-pcode-data---------------------------------------------------------------------
 # chem_path <- file.path(
 #   db_path,
 #   "Cleaned Files",
@@ -123,7 +123,7 @@ site.ex.l <- unique(sites_list$SMAS_ID)
 # rm(chem.all)
 
 
-## ----get-event-table-------------------------------------------------------------------------
+## ----get-event-table----------------------------------------------------------------------------------
 field_path <- file.path(
   db_path,
   "Cleaned Files",
@@ -165,7 +165,7 @@ field_raw_list$insitu$pcode.num <- as.numeric(field_raw_list$insitu$ISWC_CHEM_PA
 # field_raw_list$insitu<-merge(field_raw_list$insitu,chem_raw_list$pcode,by="pcode.num",all.x = TRUE)
 
 
-## ----get-macro-data--------------------------------------------------------------------------
+## ----get-macro-data-----------------------------------------------------------------------------------
 # read in data that have the "master" tag
 db_path <- paste("C:/Users/", params$user, "/New York State Office of Information Technology Services/SMAS - Streams Data Modernization", sep = "")
 
@@ -217,7 +217,7 @@ bugs_raw <- merge(
 )
 
 
-## ----change-date-formats---------------------------------------------------------------------
+## ----change-date-formats------------------------------------------------------------------------------
 # change date on the insitu data and bugs raw
 field_raw_list$insitu$ISWC_EVENT_SMAS_SAMPLE_DATE <- as.Date(field_raw_list$insitu$ISWC_EVENT_SMAS_SAMPLE_DATE, "%m/%d/%Y")
 metrics$MSSIH_EVENT_SMAS_SAMPLE_DATE <- as.Date(metrics$MSSIH_EVENT_SMAS_SAMPLE_DATE, "%m/%d/%Y")
@@ -231,7 +231,7 @@ library(lubridate)
 field_raw_list$insitu$year <- as.character(year(field_raw_list$insitu$ISWC_EVENT_SMAS_SAMPLE_DATE))
 
 
-## ----subset-data-to-sites-list---------------------------------------------------------------
+## ----subset-data-to-sites-list------------------------------------------------------------------------
 sites.l <- unique(sites_list$SMAS_ID)
 
 # get the sites first and then merge with the raw bugs and metrics by the validator.
@@ -265,7 +265,7 @@ sample_info.df <- field_raw_list$sample_info %>%
   subset(SEIH_EVENT_SMAS_HISTORY_ID %in% sites.l)
 
 
-## --------------------------------------------------------------------------------------------
+## -----------------------------------------------------------------------------------------------------
 
 sites_list$filter_match <- paste(sites_list$SMAS_ID,
   sites_list$YEAR,
@@ -318,7 +318,7 @@ unmatched_sample_info <- merge(unmatched, field_raw_list$sample_info,
 # double checked the 2021-these are low gradient samples; not sure about the rest of them
 
 
-## ----run-spsurvey package--------------------------------------------------------------------
+## ----run-spsurvey package-----------------------------------------------------------------------------
 # open the template data
 # load(file='data/NE_Lakes.rda')
 
@@ -363,7 +363,7 @@ spsurvey::sp_summary(metrics.sf, formula = MMDH_BIO_ASMT_PROFILE_SCORE ~ BASIN)
 spsurvey::sp_plot(metrics.sf, formula = MMDH_BIO_ASMT_PROFILE_SCORE ~ BASIN)
 
 
-## ----trend-data------------------------------------------------------------------------------
+## ----trend-data---------------------------------------------------------------------------------------
 #as of 11/22/22 this is not working, but will be fun to try
 
 # metrics_all.sf <- sf::st_as_sf(metrics_joined,

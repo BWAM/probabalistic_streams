@@ -32,7 +32,7 @@ prob_3<-used_site(prob_3)
 
 
 #now we have to adjust the weights by each draw frame
-# i used the identified sites to confirme the TS for the base samples, any that were base and
+# i used the identified sites to confirm the TS for the base samples, any that were base and
 #not sampled got a PB or physical barrier. The overdraws that were not sampled got "NN" or not
 #needed, "NT" was reserved for those that were tidally influenced
 #The status column was added by hand looking at the confirmed sites and the notes in the original
@@ -54,7 +54,8 @@ adjust_weight<-function(df){
   
   x<-spsurvey::adjwgt(wgt,wgtcat,framesize,sites)
   
-  df_adj<-cbind(df,x)
+  df_adj<-cbind(df,x) #cbind might not be ok, mismatches might be happening
+  #try mutate instead
   return(df_adj)
 }
 

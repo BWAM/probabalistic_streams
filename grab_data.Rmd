@@ -20,7 +20,7 @@ library(spsurvey)
 # view the citation
 # citation(package = "spsurvey")
 library(dplyr)
-# source(here::here("harvestng_COMID_wgt_11_9_22.R"))
+# source(here::here("harvesting_COMID_wgt_11_9_22.R"))
 # source(here::here("Scripts/comid_wgt_join.R")) ##run these to match the COMID and wgts from the original EPA draw files. 
 #As of 11/21/22 KAR identified that wgts have to be re-adjustd after determining what was actually sampled. This was updated and included in the analysis now.
 
