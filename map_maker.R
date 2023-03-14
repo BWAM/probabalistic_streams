@@ -1,4 +1,4 @@
-## ----setup, include=FALSE------------------------------------------------------
+## ----setup, include=FALSE---------------------------------
 knitr::opts_chunk$set(echo = TRUE)
 
 
@@ -20,9 +20,9 @@ library(tmap)
 library(viridis)
 
 
-## ------------------------------------------------------------------------------
-basin_path <- "L:/DOW/BWAM Share/SMAS/data/map_files"
-basin_path <- "L:/BWAM Share/SMAS/data/map_files" #for keleigh
+## ---------------------------------------------------------
+basin_path <- "L:/DOW/BWAM Share/SMAS/data/archive/map_files"
+# basin_path <- "L:/BWAM Share/SMAS/data/archive/map_files" #for keleigh
 
 basin <- rgdal::readOGR(
   dsn = basin_path,
@@ -37,7 +37,7 @@ basin_shp <- sp::spTransform(
 )
 
 
-## ------------------------------------------------------------------------------
+## ---------------------------------------------------------
 states <- sf::st_as_sf(map("state",
                            plot = FALSE,
                            fill = TRUE))
@@ -55,7 +55,7 @@ xrange <- bbox_new$xmax - bbox_new$xmin # range of x values
 yrange <- bbox_new$ymax - bbox_new$ymin # range of y values
 
 # bbox_new[1] <- bbox_new[1] - (0.25 * xrange) # xmin - left
-bbox_new[3] <- bbox_new[3] + (0.25 * xrange) # xmax - right
+bbox_new[3] <- bbox_new[3] + (0.4 * xrange) # xmax - right
 # bbox_new[2] <- bbox_new[2] - (0.25 * yrange) # ymin - bottom
 bbox_new[4] <- bbox_new[4] + (0.2 * yrange) # ymax - top
 
@@ -64,7 +64,7 @@ bbox_new <- bbox_new %>% # take the bounding box ...
 # checking SSL
 
 
-## ------------------------------------------------------------------------------
+## ---------------------------------------------------------
 # basin_map <- tm_basemap(c(
 #   StreetMap = "OpenStreetMap",
 #   TopoMap = "OpenTopoMap"
@@ -94,19 +94,19 @@ bbox_new <- bbox_new %>% # take the bounding box ...
 # basin_map
 
 
-## ------------------------------------------------------------------------------
+## ---------------------------------------------------------
 
 # read in the analysis data
 sps_data <- read.csv("outputs/mean_subpop_basin_17_21_cycle.csv")
 sps_data$Basin__ <- sps_data$Subpopulation
 sps_data2<-sps_data %>% #take out housatonic and ramapo
-  dplyr::filter(Basin__!=15)
+  dplyr::filter(!Basin__ %in% c("15", "16", "All Sites"))
   
 
 basin_map_append <- merge(basin_shp, sps_data2) # merge data by changing the subpopulation name
 
 
-## ------------------------------------------------------------------------------
+## ---------------------------------------------------------
 
 # viridis magma, specify 0-10 range in the tm_fill; just do the last cycle for the analysis-look this up to see how we do trend analysis-just do last 5
 
@@ -141,7 +141,7 @@ basin_map2 <- tm_basemap(c(
 basin_map2
 
 
-## ------------------------------------------------------------------------------
+## ---------------------------------------------------------
 
 # read in the analysis data for first cycle
 # sps_data2 <- read.csv("outputs/mean_subpop_basin_2008_2012_cycle.csv")
@@ -150,7 +150,7 @@ basin_map2
 # basin_map_append2 <- merge(basin_shp, sps_data2) # merge data by changing the subpopulation name
 
 
-## ------------------------------------------------------------------------------
+## ---------------------------------------------------------
 
 # viridis magma, specify 0-10 range in the tm_fill; just do the last cycle for the analysis-look this up to see how we do trend analysis-just do last 5
 
@@ -186,20 +186,29 @@ basin_map2
 # basin_map_first
 
 
-## ----create-tables-for-writeup-------------------------------------------------
+## ----create-tables-for-writeup----------------------------
 
-sps_data_short <- sps_data %>%
-  dplyr::select(Subpopulation, Estimate, StdError,nResp) %>%
-  dplyr::rename(
-    Basin = Subpopulation,
-    n = nResp,
-    "Estimated BAP Score" = Estimate,
-    "Standard Error" = StdError
-  ) %>%
-  mutate_if(is.numeric,
-    round,
-    digits = 2
-  ) # round the digits in the table to something more palatable
+sps_data_short <- sps_data |> 
+  dplyr::select(Subpopulation,
+                Estimate,
+                MarginofError,
+                nResp) %>%
+  dplyr::mutate(Estimate = sprintf("%.1f",
+                                   round(Estimate, 1)),
+                MarginofError = sprintf("%.1f",
+                                        round(MarginofError, 1))                  ) |>
+    tidyr::unite(
+      col = "average_ci",
+      c("Estimate", "MarginofError"),
+      sep = " \u00B1 "
+    ) |>
+  dplyr::mutate(average_ci = dplyr::if_else(Subpopulation %in% c("15", "16"),                                                       "NA",                                                        average_ci)) |> 
+  dplyr::arrange(suppressWarnings(as.numeric(Subpopulation))) |> 
+  dplyr::select(
+    "basin_num" = Subpopulation,
+    "Sample Size" = nResp,
+    "Estimated Average BAP Score" = average_ci
+  )  
 # table function
 table.f <- function(df, x, y) {
   library(flextable)
@@ -214,22 +223,39 @@ table.f <- function(df, x, y) {
 }
 
 #merge with basin name
-basins<-basin_shp@data
-basins<-basins %>% 
-  dplyr::select(Basin,Basin__) %>% 
-  dplyr::rename(Name=Basin) %>% 
-  mutate(Name=case_when(Name=="Lake Ontario1"~"Lake Ontario and Tribs",
-                        Name=="Lake Ontario3"~"Lake Ontario and Tribs",
-                        Name=="Lake Ontario4"~"Lake Ontario and Tribs",
-                        Name=="Lake Ontario Tributaries"~"Lake Ontario and Tribs",
-                        TRUE~Name)) %>% 
-  distinct()
-sps_data_short<-merge(sps_data_short,basins,
-                      by.x="Basin",
-                      by.y="Basin__")
+
+basins <- basin_shp@data %>%
+  dplyr::select(Basin, Basin__) %>%
+  dplyr::rename(Name = Basin) %>%
+  mutate(
+    Name = case_when(
+      grepl("Ontario", Name) ~ "Lake Ontario",
+      grepl("Niagara", Name) ~ "Lake Erie-Niagara River",
+      grepl("Oswego", Name) ~ "Oswego River",
+      TRUE ~ Name
+    ),
+    basin_num = as.character(Basin__)
+  ) %>%
+  bind_rows(data.frame(Name = "Statewide",
+                       basin_num = NA_character_)) |>
+  distinct() |>
+  dplyr::select(-Basin__)
+sps_data_final <- left_join(sps_data_short, basins,
+                            by = "basin_num")  |>
+  arrange(as.numeric(basin_num)) |>
+  mutate(
+    Name = if_else(basin_num %in% "All Sites",
+                   "State-Wide",
+                   Name),
+    basin_num = if_else(basin_num %in% "All Sites",
+                        "",
+                        basin_num)
+  ) |>
+  relocate("Basin Number" = basin_num,
+           "Major Drainage Basin" = Name)
 
 
-tab <- table.f(sps_data_short, 2, ncol(sps_data_short))
-tab
+
+(tab <- table.f(sps_data_final, 2, ncol(sps_data_final)))
 
 
