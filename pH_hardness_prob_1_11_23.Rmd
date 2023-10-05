@@ -1,0 +1,274 @@
+---
+title: "pH_Hardness_probabalistic"
+author: "Keleigh Reynolds"
+date: "12/22/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+# for loading our data
+library(raster)
+library(readr)
+library(readxl)
+library(sf)
+# for datasets
+library(maps)
+library(spData)
+# for plotting
+library(flextable)
+library(grid)
+library(tmap)
+library(viridis)
+library(spsurvey)
+library(tidyverse)
+```
+
+```{r read-in-files, warning=FALSE,message=FALSE}
+insitu<-read.csv(here::here("outputs/insitu_joined_17_21.csv"))
+
+chem<-read.csv(here::here("outputs/chem_joined_17_21.csv"))
+
+```
+
+
+```{r create-sf-objects,warning=FALSE,message=FALSE}
+
+chem.sf <- sf::st_as_sf(chem,
+  coords = c("longitude", "latitude"),
+  crs = "+proj=longlat +datum=WGS84 +no_defs"
+)
+
+hardness.sf<-chem.sf %>% 
+  filter(CHEM_PARAMETER_NAME %in% "HARDNESS (AS CACO3)") %>% 
+  filter(adj_wgt>0) #should not be any 0's
+
+insitu.sf <- sf::st_as_sf(insitu,
+  coords = c("longitude", "latitude"),
+  crs = "+proj=longlat +datum=WGS84 +no_defs"
+)
+
+pH.sf<-insitu.sf %>% 
+  filter(ISWC_CHEM_PARAMETER_NAME %in% "PH") %>% 
+  filter(adj_wgt>0)#should not be any 0's
+
+```
+
+```{r run-the-survey,warning=FALSE,message=FALSE}
+
+cont_ests_hardness <- spsurvey::cont_analysis(hardness.sf,
+  siteID = "SMAS_ID",
+  vars = "median",
+  subpops = "BASIN",
+  weight = "adj_wgt" #using the adjusted weights calculatd on 11/22/22 KAR
+)
+
+cont_ests.ph <- spsurvey::cont_analysis(pH.sf,
+  siteID = "SMAS_ID",
+  vars = "median",
+  subpops = "BASIN",
+  weight = "adj_wgt" #using the adjusted weights calculatd on 11/22/22 KAR
+)
+
+```
+
+
+
+
+```{r create-map-basin-file,warning=FALSE,message=FALSE}
+#basin_path <- "L:/DOW/BWAM Share/SMAS/data/map_files"
+basin_path <- "L:/BWAM Share/SMAS/data/archive/map_files" #for keleigh
+
+basin <- rgdal::readOGR(
+  dsn = basin_path,
+  layer = "basin_big",
+  verbose = FALSE
+)
+
+# change coords to web mercator for the map
+basin_shp <- sp::spTransform(
+  basin,
+  sp::CRS("+proj=longlat +datum=WGS84 +no_defs")
+)
+```
+
+```{r append-analysis-to-map-file,warning=FALSE,message=FALSE}
+
+# change subpopulation
+cont_ests_hardness$Mean$Basin__ <- cont_ests_hardness$Mean$Subpopulation
+cont_ests.ph$Mean$Basin__ <- cont_ests.ph$Mean$Subpopulation
+
+hardness_prob<-cont_ests_hardness$Mean
+
+insitu_prob<-cont_ests.ph$Mean 
+
+basin_map_append_hardness <- merge(basin_shp, hardness_prob) # merge data by changing the subpopulation name
+basin_map_append_ph <- merge(basin_shp, insitu_prob)
+```
+
+```{r map-create-state-outline}
+states <- sf::st_as_sf(maps::map("state",
+                           plot = FALSE,
+                           fill = TRUE))
+nys <- states %>%
+  filter(ID == "new york")
+
+# get bounding for the outline this is for the inset map, to make it have a border
+outline.df <- ggplot2::fortify(nys)
+nybox <- sf::st_as_sfc(sf::st_bbox(outline.df))
+
+# make some bbox magic to give it a little border
+bbox_new <- st_bbox(nybox) # current bounding box
+
+xrange <- bbox_new$xmax - bbox_new$xmin # range of x values
+yrange <- bbox_new$ymax - bbox_new$ymin # range of y values
+
+# bbox_new[1] <- bbox_new[1] - (0.25 * xrange) # xmin - left
+bbox_new[3] <- bbox_new[3] + (0.25 * xrange) # xmax - right
+# bbox_new[2] <- bbox_new[2] - (0.25 * yrange) # ymin - bottom
+bbox_new[4] <- bbox_new[4] + (0.2 * yrange) # ymax - top
+
+bbox_new <- bbox_new %>% # take the bounding box ...
+  st_as_sfc() # ... and make it a sf polygon
+# checking SSL
+```
+
+```{r render-map-hardness,warning=FALSE,message=FALSE,results='markup'}
+basin_map_hardness <- tm_basemap(c(
+  StreetMap = "OpenStreetMap",
+  TopoMap = "OpenTopoMap"
+)) +
+  # tmap::tm_shape(nys,
+  #                bbox = bbox_new) +
+  # tmap::tm_fill() +
+  tm_shape(basin_map_append_hardness,
+    bbox = bbox_new
+  ) +
+  tm_fill(
+    col = "Estimate", alpha = .9,
+    breaks = c(0, 20, 50, 100,150, 200,250, 300),
+    title = "Estimated Hardness", palette = "-viridis"
+  ) +
+  tm_borders() +
+  tm_scale_bar(position = c("left", "bottom"), width = 0.15) +
+  tm_compass(position = c("left", "top"), size = 2) +
+  tm_layout(title = "Statewide Probabalistic Analysis",
+            legend.position = c("right", "top")) +
+  tm_credits("Data source:2017-2021 ",
+    fontface = "italic",
+    align = "right"
+  ) +
+  tm_credits("Author: SMAS ",
+    fontface = "bold",
+    align = "right"
+  )+tm_text("Basin__", size=0.5)
+basin_map_hardness
+```
+
+
+```{r render-map-ph,results='markup'}
+basin_map_ph <- tm_basemap(c(
+  StreetMap = "OpenStreetMap",
+  TopoMap = "OpenTopoMap"
+)) +
+  # tmap::tm_shape(nys,
+  #                bbox = bbox_new) +
+  # tmap::tm_fill() +
+  tm_shape(basin_map_append_ph,
+    bbox = bbox_new
+  ) +
+  tm_fill(
+    col = "Estimate", alpha = .9,
+    breaks = c(0,6, 7,7.2,7.5,7.8, 8, 9, 10),
+    title = "Estimated pH", palette = "viridis"
+  ) +
+  tm_borders() +
+  tm_scale_bar(position = c("left", "bottom"), width = 0.15) +
+  tm_compass(position = c("left", "top"), size = 2) +
+  tm_layout(title = "Statewide Probabalistic Analysis",
+            legend.position = c("right", "top")) +
+  tm_credits("Data source:2017-2021 ",
+    fontface = "italic",
+    align = "right"
+  ) +
+  tm_credits("Author: SMAS ",
+    fontface = "bold",
+    align = "right"
+  )+tm_text("Basin__", size=0.5)
+basin_map_ph
+```
+
+```{r tables-ph}
+hardness_data_short <- hardness_prob %>%
+  dplyr::select(Subpopulation, Estimate, StdError,nResp) %>%
+  dplyr::rename(
+    Basin = Subpopulation,
+    n = nResp,
+    "Estimated Hardness" = Estimate,
+    "Standard Error" = StdError
+  ) %>%
+  mutate_if(is.numeric,
+    round,
+    digits = 2
+  ) # round the digits in the table to something more palatable
+# table function
+table.f <- function(df, x, y) {
+  library(flextable)
+  tl <- flextable(df) %>%
+    font(i = NULL, j = NULL, fontname = "Arial", part = "all") %>%
+    theme_zebra()
+  tl <- fontsize(tl, size = 8, part = "all")
+  tl <- autofit(tl)
+  tl <- set_table_properties(tl, layout = "autofit")
+  tl <- align(tl, i = NULL, j = (x:y), align = "center", part = "all")
+  tl
+}
+
+#merge with basin name
+basins<-basin_shp@data
+basins<-basins %>% 
+  dplyr::select(Basin,Basin__) %>% 
+  dplyr::rename(Name=Basin) %>% 
+  mutate(Name=case_when(Name=="Lake Ontario1"~"Lake Ontario and Tribs",
+                        Name=="Lake Ontario3"~"Lake Ontario and Tribs",
+                        Name=="Lake Ontario4"~"Lake Ontario and Tribs",
+                        Name=="Lake Ontario Tributaries"~"Lake Ontario and Tribs",
+                        TRUE~Name)) %>% 
+  distinct()
+hardness_data_short_table<-merge(hardness_data_short,basins,
+                      by.x="Basin",
+                      by.y="Basin__")
+
+
+tab <- table.f(hardness_data_short_table, 2, ncol(hardness_data_short_table))
+tab<-fit_to_width(tab,max_width = 10)
+```
+
+```{r render-tables-ph}
+ph_data_short <- insitu_prob %>%
+  dplyr::select(Subpopulation, Estimate, StdError,nResp) %>%
+  dplyr::rename(
+    Basin = Subpopulation,
+    n = nResp,
+    "Estimated Hardness" = Estimate,
+    "Standard Error" = StdError
+  ) %>%
+  mutate_if(is.numeric,
+    round,
+    digits = 2
+  ) # round the digits in the table to something more palatable
+
+
+#merge with basin name
+ph_data_short_table<-merge(ph_data_short,basins,
+                      by.x="Basin",
+                      by.y="Basin__")
+
+
+tab2 <- table.f(ph_data_short_table, 2, ncol(ph_data_short_table))
+tab2<-fit_to_width(tab2,max_width = 10)
+```
+```
+
+

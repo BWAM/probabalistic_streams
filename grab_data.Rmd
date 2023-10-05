@@ -81,59 +81,62 @@ site.ex.l <- unique(sites_list$SMAS_ID)
 Grab chemistry and pcode data (this will likely be used later in the analysis)
 
 ```{r get-chemistry-and-pcode-data}
-# chem_path <- file.path(
-#   db_path,
-#   "Cleaned Files",
-#   "Final_Chemistry_ITS"
-# )
-# # Get the file paths for the filenames with the prefix "MASTER" and
-# # extension CSV.
-# chem_csv_list <- list.files(
-#   path = chem_path,
-#   pattern = "MASTER(.+?)csv",
-#   full.names = TRUE
-# )
-# # Identify the appropriate name for each file path.
-# chem_csv_names <- case_when(
-#   grepl("RESULT", chem_csv_list) ~ "result",
-#   grepl("SAMPLE", chem_csv_list) ~ "sample",
-#   grepl("PARAMETER", chem_csv_list) ~ "pcode",
-#
-#   TRUE ~ "ERROR"
-# )
-# # Assign easy to reference names to filepaths.
-# names(chem_csv_list) <- chem_csv_names
-# # Reading in macro data -------------------------------------------------
-# ## Loop through CSV list, import data, store in a list.
-# chem_raw_list <- lapply(chem_csv_list, function(file_i) {
-#   # Import data
-#   read.csv(
-#     file_i,
-#     na.strings = c("", "NA"),
-#     stringsAsFactors = FALSE
-#   )})
-# # Join chem Data ----------------------------------------------------------
-#
-# chem.all<-merge(chem_raw_list$result,chem_raw_list$sample,
-#                 by.x=c("CHR_SYS_SAMPLE_CDE","CHR_SAMPLE_DEL_GRP"),
-#                 by.y=c("CHS_SYS_SAMPLE_CDE","CHS_SAMPLE_DEL_GRP"))
-#
-# chem.all<-chem.all %>%
-#   subset(gdata::startsWith(CHS_DEC_SAMPLE_TYPE_CDE, "N")) %>%
-#   subset(CHS_SAMPLE_SOURCE=="Field") %>%
-#   subset(CHR_RESULT_TYPE_CDE %in% "TRG")
-#
-# #change both to numeric
-# chem_raw_list$pcode$pcode.num<-as.numeric(chem_raw_list$pcode$CHEM_PARAMETER_PCODE)
-#
-#
-# #merge pcode and chemistry
-# chem<-merge(chem.all,chem_raw_list$pcode,by.x="CHR_PCODE",by.y="pcode.num",all.x = TRUE) %>%
-#   #filter out lab pH, lab temperature, and lab specific conductance
-#   filter(!(CHR_PCODE %in% c(110, 136, 139, 143, 145)))
-#
-# #clean up\
-# rm(chem.all)
+chem_path <- file.path(
+  db_path,
+  "Cleaned Files",
+  "Final_Chemistry_ITS"
+)
+# Get the file paths for the filenames with the prefix "MASTER" and
+# extension CSV.
+chem_csv_list <- list.files(
+  path = chem_path,
+  pattern = "MASTER(.+?)csv",
+  full.names = TRUE
+)
+# Identify the appropriate name for each file path.
+chem_csv_names <- case_when(
+  grepl("RESULT", chem_csv_list) ~ "result",
+  grepl("SAMPLE", chem_csv_list) ~ "sample",
+  grepl("PARAMETER", chem_csv_list) ~ "pcode",
+
+  TRUE ~ "ERROR"
+)
+# Assign easy to reference names to filepaths.
+names(chem_csv_list) <- chem_csv_names
+# Reading in macro data -------------------------------------------------
+## Loop through CSV list, import data, store in a list.
+chem_raw_list <- lapply(chem_csv_list, function(file_i) {
+  # Import data
+  read.csv(
+    file_i,
+    na.strings = c("", "NA"),
+    stringsAsFactors = FALSE
+  )})
+# Join chem Data ----------------------------------------------------------
+
+chem.all<-merge(chem_raw_list$result,chem_raw_list$sample,
+                by.x=c("CHR_SYS_SAMPLE_CDE","CHR_SAMPLE_DEL_GRP"),
+                by.y=c("CHS_SYS_SAMPLE_CDE","CHS_SAMPLE_DEL_GRP"))
+
+chem.all<-chem.all %>%
+  subset(gdata::startsWith(CHS_DEC_SAMPLE_TYPE_CDE, "N")) %>%
+  subset(CHS_SAMPLE_SOURCE=="Field") %>%
+  subset(CHR_RESULT_TYPE_CDE %in% "TRG")
+
+#change both to numeric
+chem_raw_list$pcode$pcode.num<-as.numeric(chem_raw_list$pcode$CHEM_PARAMETER_PCODE)
+
+
+#merge pcode and chemistry
+chem<-merge(chem.all,chem_raw_list$pcode,by.x="CHR_PCODE",by.y="pcode.num",all.x = TRUE) %>%
+  #filter out lab pH, lab temperature, and lab specific conductance
+  filter(!(CHR_PCODE %in% c(110, 136, 139, 143, 145)))
+
+#clean up\
+rm(chem.all)
+
+
+
 ```
 
 
@@ -283,6 +286,14 @@ sample_info.df <- field_raw_list$sample_info %>%
   subset(SEIH_EVENT_SMAS_HISTORY_ID %in% sites.l)
 ```
 
+
+```{r subset-chem}
+
+chem2<-chem %>% 
+  subset(CHS_EVENT_SMAS_HISTORY_ID %in% sites.l)
+
+```
+
 Subset to Dates function-we have the list of sites/dates. One question-do we do an average of BAP at a site (if it's been visited a couple times?) or do we do JUST the BAP found at the sampling date?
 
 ```{r}
@@ -290,6 +301,36 @@ Subset to Dates function-we have the list of sites/dates. One question-do we do 
 sites_list$filter_match <- paste(sites_list$SMAS_ID,
   sites_list$YEAR,
   sep = "_"
+)
+
+chem3<-chem2 %>% 
+  filter(CHR_VALIDATOR_QUAL != "R") %>% 
+  mutate(date=as.Date(CHS_EVENT_SMAS_SAMPLE_DATE,"%m/%d/%Y"),
+         year=format(date,"%Y"),
+         filter_match=paste(CHS_EVENT_SMAS_HISTORY_ID,
+                            year,
+                            sep = "_")) %>% 
+  group_by(filter_match,CHEM_PARAMETER_NAME,CHEM_PARAMETER_UNIT_NOSP,CHEM_PARAMETER_FRACTION) %>% 
+  summarise(median=median(CHR_RESULT_VALUE,na.rm = TRUE))
+
+chem_joined <- merge(sites_list,
+  chem3,
+  by = "filter_match"
+)
+
+#same thing for the insitu
+insitu2<-insitu.df %>% 
+  mutate(date=as.Date(ISWC_EVENT_SMAS_SAMPLE_DATE,"%m/%d/%Y"),
+         year=format(date,"%Y"),
+         filter_match=paste(ISWC_EVENT_SMAS_HISTORY_ID,
+                            year,
+                            sep = "_")) %>% 
+  group_by(filter_match,ISWC_CHEM_PARAMETER_NAME) %>% 
+  summarise(median=median(ISWC_RESULT,na.rm = TRUE))
+
+insitu_joined <- merge(sites_list,
+  insitu2,
+  by = "filter_match"
 )
 
 
@@ -357,6 +398,35 @@ metrics_joined$BASIN <- as.numeric(substr(metrics_joined$SMAS_ID, start = 1, sto
 metrics_joined_last_cycle <- metrics_joined %>%
   filter(YEAR >= 2017 & YEAR <= 2021)
 
+chem_joined_last_cycle <- chem_joined %>%
+  filter(YEAR >= 2017 & YEAR <= 2021)
+chem_joined_last_cycle <- chem_joined_last_cycle %>%
+  dplyr::rename(latitude = LAT, longitude = LONG)
+# get basin in there
+chem_joined_last_cycle$BASIN <- as.numeric(substr(chem_joined_last_cycle$SMAS_ID, start = 1, stop = 2))
+
+#write.csv(chem_joined_last_cycle,"outputs/chem_joined_17_21.csv")
+
+#same for the in-situ
+insitu_joined_last_cycle <- insitu_joined %>%
+  filter(YEAR >= 2017 & YEAR <= 2021)
+
+chem_joined_last_cycle <- chem_joined_last_cycle %>%
+  dplyr::rename(latitude = LAT, longitude = LONG)
+# get basin in there
+chem_joined_last_cycle$BASIN <- as.numeric(substr(chem_joined_last_cycle$SMAS_ID, start = 1, stop = 2))
+
+insitu_joined_last_cycle<-insitu_joined_last_cycle %>% 
+  mutate(BASIN=as.numeric(substr(SMAS_ID, start = 1, stop = 2)))
+insitu_joined_last_cycle <- insitu_joined_last_cycle %>%
+  dplyr::rename(latitude = LAT, longitude = LONG)
+#write.csv(insitu_joined_last_cycle,"outputs/insitu_joined_17_21.csv")
+
+
+chem.sf <- sf::st_as_sf(chem_joined_last_cycle,
+  coords = c("longitude", "latitude"),
+  crs = "+proj=longlat +datum=WGS84 +no_defs"
+)
 
 
 metrics.sf <- sf::st_as_sf(metrics_joined_last_cycle,
@@ -387,6 +457,16 @@ write.csv(cont_ests$Mean, "outputs/mean_subpop_basin_17_21_cycle.csv")
 spsurvey::sp_summary(metrics.sf, formula = MMDH_BIO_ASMT_PROFILE_SCORE ~ BASIN)
 spsurvey::sp_plot(metrics.sf, formula = MMDH_BIO_ASMT_PROFILE_SCORE ~ BASIN)
 ```
+
+```{r}
+cont_ests <- spsurvey::cont_analysis(chem.sf,
+  siteID = "SMAS_ID",
+  vars = "MMDH_BIO_ASMT_PROFILE_SCORE",
+  subpops = "BASIN",
+  weight = "adj_wgt" #using the adjusted weights calculatd on 11/22/22 KAR
+)
+```
+
 
 ```{r trend-data}
 #as of 11/22/22 this is not working, but will be fun to try
