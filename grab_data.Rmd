@@ -4,7 +4,7 @@ author: "Keleigh Reynolds"
 date: "11/2/2022"
 output: html_document
 params: 
-  user: kareynol
+  user: "zmsmith.000"
   file: outputs/prob_site_adj_wgt_kar.csv
 ---
 
@@ -390,7 +390,11 @@ We also need to assign the weight back to the COMID or the EPA ID to get that fo
 
 metrics_joined$YEAR <- metrics_joined$YEAR.x
 metrics_joined <- metrics_joined %>%
-  dplyr::rename(latitude = LAT, longitude = LONG)
+  dplyr::rename(latitude = LAT, longitude = LONG)# |> 
+  # dplyr::left_join(insitu.df,
+  #                  by = 
+  #                    c("MSSIH_EVENT_SMAS_HISTORY_ID" = "ISWC_EVENT_SMAS_HISTORY_ID",
+  #                         "MSSIH_EVENT_SMAS_SAMPLE_DATE" = "ISWC_EVENT_SMAS_SAMPLE_DATE"))
 # get basin in there
 metrics_joined$BASIN <- as.numeric(substr(metrics_joined$SMAS_ID, start = 1, stop = 2))
 
@@ -434,25 +438,47 @@ metrics.sf <- sf::st_as_sf(metrics_joined_last_cycle,
   crs = "+proj=longlat +datum=WGS84 +no_defs"
 )
 
+housatonic <- data.frame(
+  Type = "BASIN",
+  Subpopulation = "16",
+  Indicator = "MMDH_BIO_ASMT_PROFILE_SCORE",
+  nResp = 0
+)
 
 
 cont_ests <- spsurvey::cont_analysis(metrics.sf,
   siteID = "MSSIH_EVENT_SMAS_HISTORY_ID",
   vars = "MMDH_BIO_ASMT_PROFILE_SCORE",
   subpops = "BASIN",
-  weight = "adj_wgt" #using the adjusted weights calculatd on 11/22/22 KAR
-)
+  weight = "adj_wgt", #using the adjusted weights calculated on 11/22/22 KAR
+  All_Sites = TRUE
+) 
 # statewide
-# cont_ests<-spsurvey::cont_analysis(metrics.sf,
+# cont_ests_sw <-spsurvey::cont_analysis(metrics.sf,
 #                                    siteID="MSSIH_EVENT_SMAS_HISTORY_ID",
 #                                    vars="MMDH_BIO_ASMT_PROFILE_SCORE",
 #                                    #subpops = "SITE_BASIN",
 #                                    weight="wgt")
 
+# cont_ests_sw <-metrics.sf |> 
+#   dplyr::filter(ISWC_CHEM_PARAMETER_NAME %in% "PH") |> 
+#   spsurvey::cont_analysis(
+#                                    siteID="MSSIH_EVENT_SMAS_HISTORY_ID",
+#                                    vars="ISWC_RESULT",
+#                                    #subpops = "SITE_BASIN",
+#                                    weight="wgt")
+# library(ggplot2)
+# metrics.sf |> 
+#   dplyr::filter(ISWC_CHEM_PARAMETER_NAME %in% "PH") |> 
+#   ggplot(aes(1, ISWC_RESULT)) +
+#   geom_boxplot()
+
 spsurvey::cdf_plot(cont_ests$CDF)
 
 # save the results to outputs
-write.csv(cont_ests$Mean, "outputs/mean_subpop_basin_17_21_cycle.csv")
+cont_ests$Mean |> 
+  dplyr::bind_rows(housatonic) |> 
+write.csv( "outputs/mean_subpop_basin_17_21_cycle.csv")
 
 spsurvey::sp_summary(metrics.sf, formula = MMDH_BIO_ASMT_PROFILE_SCORE ~ BASIN)
 spsurvey::sp_plot(metrics.sf, formula = MMDH_BIO_ASMT_PROFILE_SCORE ~ BASIN)
