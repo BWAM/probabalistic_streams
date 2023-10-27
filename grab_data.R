@@ -28,35 +28,35 @@ sites_list <- read.csv(here::here(params$file), stringsAsFactors = FALSE)
 # read in data that have the "master" tag
 db_path <- paste("C:/Users/", params$user, "/New York State Office of Information Technology Services/SMAS - Streams Data Modernization", sep = "")
 #
-# sites_path <- file.path(
-#   db_path,
-#   "Cleaned Files",
-#   "Final_Sites_ITS"
-# )
-# # Get the file paths for the filenames with the prefix "MASTER" and
-# # extension CSV.
-# sites_csv_list <- list.files(
-#   path = sites_path,
-#   pattern = "Master(.+?)csv",
-#   full.names = TRUE
-# )
-# # Identify the appropriate name for each file path.
-# sites_csv_names <- dplyr::case_when(
-#   grepl("Master_S_Site", sites_csv_list) ~ "sites",
-#   TRUE ~ "ERROR"
-# )
-# # Assign easy to reference names to filepaths.
-# names(sites_csv_list) <- sites_csv_names
-# # Reading in macro data -------------------------------------------------
-# ## Loop through CSV list, import data, store in a list.
-# sites_raw_list <- lapply(sites_csv_list, function(file_i) {
-#   # Import data
-#   read.csv(
-#     file_i,
-#     na.strings = c("", "NA"),
-#     stringsAsFactors = FALSE,
-#     fileEncoding = "UTF-8-BOM"
-#   )})
+sites_path <- file.path(
+  db_path,
+  "Cleaned Files",
+  "Final_Sites_ITS"
+)
+# Get the file paths for the filenames with the prefix "MASTER" and
+# extension CSV.
+sites_csv_list <- list.files(
+  path = sites_path,
+  pattern = "Master(.+?)csv",
+  full.names = TRUE
+)
+# Identify the appropriate name for each file path.
+sites_csv_names <- dplyr::case_when(
+  grepl("Master_S_Site", sites_csv_list) ~ "sites",
+  TRUE ~ "ERROR"
+)
+# Assign easy to reference names to filepaths.
+names(sites_csv_list) <- sites_csv_names
+# Reading in macro data -------------------------------------------------
+## Loop through CSV list, import data, store in a list.
+sites_raw_list <- lapply(sites_csv_list, function(file_i) {
+  # Import data
+  read.csv(
+    file_i,
+    na.strings = c("", "NA"),
+    stringsAsFactors = FALSE,
+    fileEncoding = "UTF-8-BOM"
+  )})
 
 # subset the site table
 site.ex.l <- unique(sites_list$SMAS_ID)
