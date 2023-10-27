@@ -1,0 +1,55 @@
+---
+title: "305(b) Report"
+author: "Zachary M. Smith"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  word_document:
+    df_print: paged
+---
+
+# Streams Probabilistic Sampling: 2017-2021
+
+Probability based sampling was conducted by the [Rotating Integrated Basin Studies (RIBS) Program](https://www.dec.ny.gov/chemical/23848.html) during a 5-year period (2017-2021). RIBS monitoring is conducted in 3 to 4 of New York State's 17 major drainage basins each year, providing statewide coverage over a [5-year cycle](https://www.dec.ny.gov/chemical/29576.html). Probability based sampling follows the Generalized Random Tessellation Stratified (GRTS) survey design introduced by Stevens and Olsen (2004). RIBS implements GRTS with random stratified sampling by major drainage basin (n = 17) and stream size (Strahler Order). This survey design provides spatially balanced sampling, enabling the RIBS program to make representative water quality evaluations at the major drainage basin or state-wide scale. For this analysis, Biological Assessment Profile (BAP) scores were used for basic condition estimates across the state.
+
+DEC's BAP summarizes biological community data into a score ranging from 0-10, where zero is the most disturbed and ten is the least disturbed community. Scores of five or greater are considered to represent natural or slightly altered water quality, while scores less than five represent substantially altered water quality. This analysis focused on aquatic insects and other invertebrates visible with the naked eye, collectively referred to as benthic macroinvertebrates. Benthic macroinvertebrates communities are a useful indicator of water quality because these organisms must survive and propagate in water quality conditions prior to monitoring. For more information on DEC's benthic macroinvertbrate collection methods and BAP calculations, please see DEC's [Biomonitoring SOP](https://www.dec.ny.gov/docs/water_pdf/sop20821biomonitoring.pdf) and [Bioassessment Fact Sheet.](https://www.dec.ny.gov/docs/water_pdf/bapnarrative18.pdf)
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      message = FALSE,
+                      warning = FALSE)
+#citation("spsurvey")
+```
+
+```{r load-packages}
+library(spsurvey)
+```
+
+```{r source-scripts}
+#knitr::purl(here::here("grab_data.Rmd"))
+# knitr::purl(here::here("map_maker.Rmd"))
+
+#source("grab_data.R", local = TRUE)
+source("map_maker.R", local = TRUE)
+```
+```{r get-estimate, echo=FALSE}
+get_estimate <- function(basin) {
+  sps_data_final[sps_data_final$`Major Drainage Basin` %in% basin, "Estimated Average BAP Score"]
+}
+```
+
+```{r print-table, results='asis', echo = FALSE}
+tab <- fit_to_width(tab, max_width = 10)
+tab <- flextable::set_caption(tab, "Table 1: Estimated Average Biological Assessment Profile (BAP) scores by major drainage basins of New York State and state-wide. The average estimates include the margin of error encompassing the 95% confidence interval around the estimated average BAP score.")
+tab
+```
+
+Overall, the estimated average BAP condition for New York State was `r get_estimate("State-Wide")` indicating the average wadeable stream or river in New York State has a biological condition indicative of natural or slightly altered water quality. Estimates from the Ramapo River (Basin 15) were excluded from the analysis because not enough samples were collected for reliable interpretation (n = 1). Focusing on the individual major drainage basins, provides the ability to observe spatial patterns at a higher resolution (Figure 1). Atlantic Ocean/Long Island Sound (Basin 17), Oswego River (Basin 7), and Mohawk River Basins (Basin 12), had the lowest BAP scores (Estimated Average BAP =  `r get_estimate("Atlantic Ocean/Long Island Sound")`, `r get_estimate("Oswego River")`, `r get_estimate("Mohawk River")`, respectively). Lake Champlain (Basin 10), Upper Hudson (Basin 11), and Delaware River (Basin 14) basins had the highest overall estimates for BAP scores (Estimated Average BAP = `r get_estimate("Lake Champlain")`, `r get_estimate("Upper Hudson River")`, `r get_estimate("Delaware River")`, respectively). 
+
+```{r map, echo=FALSE, results='asis', fig.cap="Figure 1. Map of estimated average Biological Assessment Profile (BAP) score by major drainage basin. Color corresponds to BAP categories indicated in the plot legend. Numeric labels indicate major drainage basin ID."}
+
+print(basin_map2)
+```
+
+**References**
+
+D.L. Stevens, A.R. Olsen. Spatially balanced sampling of natural resources. J Am Stat Assoc, 99 (2004), pp. 262-278

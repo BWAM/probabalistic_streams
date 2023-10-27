@@ -1,0 +1,279 @@
+---
+title: "spsurvey_stream_data"
+author: "Keleigh Reynolds"
+date: "11/2/2022"
+output: html_document
+params: 
+  user: kareynol
+  file: outputs/prob_site_adj_wgt_kar.csv
+---
+
+install packages
+
+```{r}
+#checkpoint::checkpoint("2022-11-17")
+# # install the most recent approved version from CRAN
+# install.packages("spsurvey")
+# # load the most recent approved version from CRAN
+library(spsurvey)
+
+# view the citation
+# citation(package = "spsurvey")
+library(dplyr)
+# source(here::here("harvesting_COMID_wgt_11_9_22.R"))
+# source(here::here("Scripts/comid_wgt_join.R")) ##run these to match the COMID and wgts from the original EPA draw files. 
+#As of 11/21/22 KAR identified that wgts have to be re-adjustd after determining what was actually sampled. This was updated and included in the analysis now.
+
+
+# test the branch and commit
+```
+
+grab data-sites list
+```{r read-site-list}
+sites_list <- read.csv(here::here(params$file), stringsAsFactors = FALSE)
+```
+
+
+Grab chemistry and pcode data (this will likely be used later in the analysis)
+
+```{r get-chemistry-and-pcode-data}
+chem<-fetch::fetch_chem(path = "L:/BWAM Share/data/streams/cleaned_files",
+                        output = "standard")
+chem$V1.x<-NULL
+chem$X.y<-NULL
+chem$V1<-NULL
+chem$V1.y<-NULL
+chem$X.x<-NULL
+chem$V1.x<-NULL
+
+chem<-chem %>% 
+  distinct()
+
+field<-fetch::fetch_field(path = "L:/BWAM Share/data/streams/cleaned_files",
+                        output = "standard")
+
+bugs<-fetch::fetch_bugs(path = "L:/BWAM Share/data/streams/cleaned_files",
+                        output = "standard")
+
+```
+
+
+```{r subset-data-to-sites-list}
+
+sites.l<-unique(sites_list$SMAS_ID)
+
+```
+
+
+```{r subset-chem}
+
+chem2<-chem %>% 
+  subset(CHS_EVENT_SMAS_HISTORY_ID %in% sites.l)
+
+```
+
+Subset to Dates function-we have the list of sites/dates. One question-do we do an average of BAP at a site (if it's been visited a couple times?) or do we do JUST the BAP found at the sampling date?
+
+```{r}
+
+sites_list$filter_match <- paste(sites_list$SMAS_ID,
+  sites_list$YEAR,
+  sep = "_"
+)
+
+chem3<-chem2 %>% 
+  filter(CHR_VALIDATOR_QUAL != "R") %>% 
+  mutate(date=as.Date(CHS_EVENT_SMAS_SAMPLE_DATE,"%m/%d/%Y"),
+         year=format(date,"%Y"),
+         filter_match=paste(CHS_EVENT_SMAS_HISTORY_ID,
+                            year,
+                            sep = "_")) %>% 
+  mutate(CHR_RESULT_VALUE = case_when(CHR_VALIDATOR_QUAL %in% "U"~0.5*CHR_METHOD_DETECT_LIMIT,
+                                      TRUE~CHR_RESULT_VALUE)) %>% #getting 1/2 the MDL for analysis
+  group_by(filter_match,CHEM_PARAMETER_NAME,CHEM_PARAMETER_UNIT_NOSP,CHEM_PARAMETER_FRACTION) %>% 
+  summarise(median=median(CHR_RESULT_VALUE,na.rm = TRUE))
+
+chem_joined <- merge(sites_list,
+  chem3,
+  by = "filter_match"
+)
+
+#same thing for the insitu
+insitu.df<-field$insitu
+
+insitu2<-insitu.df %>% 
+  mutate(date=as.Date(ISWC_EVENT_SMAS_SAMPLE_DATE,"%m/%d/%Y"),
+         year=format(date,"%Y"),
+         filter_match=paste(ISWC_EVENT_SMAS_HISTORY_ID,
+                            year,
+                            sep = "_")) %>% 
+  group_by(filter_match,ISWC_CHEM_PARAMETER_NAME) %>% 
+  summarise(median=median(ISWC_RESULT,na.rm = TRUE))
+
+insitu_joined <- merge(sites_list,
+  insitu2,
+  by = "filter_match"
+)
+
+metrics.df<-bugs
+
+metrics.final <- metrics.df %>%
+  mutate(
+    YEAR = format(MSSIH_EVENT_SMAS_SAMPLE_DATE, "%Y"),
+    filter_match = paste(MSSIH_EVENT_SMAS_HISTORY_ID,
+      YEAR,
+      sep = "_"
+    )
+  )
+# join the metrics to the final sites file with the wgt
+
+metrics_joined <- merge(sites_list,
+  metrics.final,
+  by = "filter_match"
+)
+unmatched <- anti_join(sites_list,
+  metrics.final,
+  by = "filter_match"
+)
+# join with sample info to see why they didn't match
+# create the match id first
+field_raw_list$sample_info <- field_raw_list$sample_info %>% mutate(
+  YEAR = format(SEIH_EVENT_SMAS_SAMPLE_DATE, "%Y"),
+  filter_match = paste(SEIH_EVENT_SMAS_HISTORY_ID,
+    YEAR,
+    sep = "_"
+  )
+)
+
+unmatched_sample_info <- merge(unmatched, field_raw_list$sample_info,
+  by = "filter_match"
+)
+# unmatched_sample_info<-unmatched_sample_info %>%
+#   select(SMAS_ID,YEAR.x,COMID,SEIH_EVENT_SMAS_SAMPLE_DATE,SEIH_SITE_TYPE_PROBABILISTC,
+#          SEIH_BIOSAMPLE_COLLECT,SEIH_BIOSAMPLE_TYPE) %>%
+#   filter(SEIH_BIOSAMPLE_COLLECT==TRUE)
+# double checked the 2021-these are low gradient samples; not sure about the rest of them
+```
+
+RUN THE SPSURVEY!!
+So it looks like these files need to have a projection assigned and be an sf object?
+
+We also need to assign the weight back to the COMID or the EPA ID to get that for the analysis to run.
+
+```{r run-spsurvey package}
+# open the template data
+# load(file='data/NE_Lakes.rda')
+
+metrics_joined$YEAR <- metrics_joined$YEAR.x
+metrics_joined <- metrics_joined %>%
+  dplyr::rename(latitude = LAT, longitude = LONG)
+# get basin in there
+metrics_joined$BASIN <- as.numeric(substr(metrics_joined$SMAS_ID, start = 1, stop = 2))
+
+
+metrics_joined_last_cycle <- metrics_joined %>%
+  filter(YEAR >= 2018 & YEAR <= 2022)
+
+chem_joined_last_cycle <- chem_joined %>%
+  filter(YEAR >= 2018 & YEAR <= 2022)
+chem_joined_last_cycle <- chem_joined_last_cycle %>%
+  dplyr::rename(latitude = LAT, longitude = LONG)
+# get basin in there
+chem_joined_last_cycle$BASIN <- as.numeric(substr(chem_joined_last_cycle$SMAS_ID, start = 1, stop = 2))
+
+#write.csv(chem_joined_last_cycle,"outputs/chem_joined_18_22.csv")
+
+#same for the in-situ **as of 10/2/2023 the 2022 insitu is not available so still reaching back to the 2017 year for those basins
+insitu_joined_last_cycle <- insitu_joined %>%
+  filter(YEAR >= 2017 & YEAR <= 2021)
+
+chem_joined_last_cycle <- chem_joined_last_cycle %>%
+  dplyr::rename(latitude = LAT, longitude = LONG)
+# get basin in there
+chem_joined_last_cycle$BASIN <- as.numeric(substr(chem_joined_last_cycle$SMAS_ID, start = 1, stop = 2))
+
+insitu_joined_last_cycle<-insitu_joined_last_cycle %>% 
+  mutate(BASIN=as.numeric(substr(SMAS_ID, start = 1, stop = 2)))
+insitu_joined_last_cycle <- insitu_joined_last_cycle %>%
+  dplyr::rename(latitude = LAT, longitude = LONG)
+#write.csv(insitu_joined_last_cycle,"outputs/insitu_joined_17_21.csv")
+
+
+chem.sf <- sf::st_as_sf(chem_joined_last_cycle,
+  coords = c("longitude", "latitude"),
+  crs = "+proj=longlat +datum=WGS84 +no_defs"
+)
+
+
+metrics.sf <- sf::st_as_sf(metrics_joined_last_cycle,
+  coords = c("longitude", "latitude"),
+  crs = "+proj=longlat +datum=WGS84 +no_defs"
+)
+
+
+
+cont_ests <- spsurvey::cont_analysis(metrics.sf,
+  siteID = "MSSIH_EVENT_SMAS_HISTORY_ID",
+  vars = "MMDH_BIO_ASMT_PROFILE_SCORE",
+  subpops = "BASIN",
+  weight = "adj_wgt" #using the adjusted weights calculatd on 11/22/22 KAR
+)
+# statewide
+# cont_ests<-spsurvey::cont_analysis(metrics.sf,
+#                                    siteID="MSSIH_EVENT_SMAS_HISTORY_ID",
+#                                    vars="MMDH_BIO_ASMT_PROFILE_SCORE",
+#                                    #subpops = "SITE_BASIN",
+#                                    weight="wgt")
+
+spsurvey::cdf_plot(cont_ests$CDF)
+
+# save the results to outputs
+write.csv(cont_ests$Mean, "outputs/mean_subpop_basin_17_21_cycle.csv")
+
+spsurvey::sp_summary(metrics.sf, formula = MMDH_BIO_ASMT_PROFILE_SCORE ~ BASIN)
+spsurvey::sp_plot(metrics.sf, formula = MMDH_BIO_ASMT_PROFILE_SCORE ~ BASIN)
+```
+
+```{r}
+cont_ests <- spsurvey::cont_analysis(chem.sf,
+  siteID = "SMAS_ID",
+  vars = "MMDH_BIO_ASMT_PROFILE_SCORE",
+  subpops = "BASIN",
+  weight = "adj_wgt" #using the adjusted weights calculatd on 11/22/22 KAR
+)
+```
+
+
+```{r trend-data}
+#as of 11/22/22 this is not working, but will be fun to try
+
+# metrics_all.sf <- sf::st_as_sf(metrics_joined,
+#   coords = c("longitude", "latitude"),
+#   crs = "+proj=longlat +datum=WGS84 +no_defs"
+# )
+# metrics_all.sf$YEAR <- as.factor(metrics_all.sf$YEAR)
+# 
+# change <- spsurvey::change_analysis(
+#   metrics_all.sf,
+#   siteID = "MSSIH_EVENT_SMAS_HISTORY_ID",
+#   vars_cont = "MMDH_BIO_ASMT_PROFILE_SCORE",
+#   surveyID = "YEAR",
+#   weight = "wgt"
+# )
+# 
+# 
+# ex_run <- spsurvey::change_analysis(
+#   ex,
+#   siteID = "SITE_ID",
+#   vars_cont = "BMMI",
+#   vars_cat = "NITR_COND",
+#   surveyID = "YEAR",
+#   weight = "WEIGHT"
+# )
+# 
+# ex <- spsurvey::NRSA_EPA7
+```
+
+
+
+
