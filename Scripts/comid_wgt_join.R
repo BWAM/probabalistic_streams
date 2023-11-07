@@ -113,6 +113,7 @@ joined2 <- left_join(
   by = "COMID"#joined the df's by just comid, this created many duplicates
 )
 
+
 joined3 <- filter(
   .data = joined2, 
   YEAR >= start & YEAR <= end #this filtered teh data set to be within the draw years
